@@ -115,7 +115,23 @@ export default {
         });
         this.$refs.localVideo.srcObject = this.localStream;
         this.setupAudioAnalysis();
-        this.$refs.remoteVideo.play();
+
+        // this.ws = new WebSocket("ws://localhost:8000/ws");
+
+        // this.ws.onopen = () => {
+        //   console.log("WebSocket подключен");
+        //   this.sendFrames();
+        // };
+
+        // this.ws.onmessage = (event) => {
+        //   console.log("Распознанная эмоция:", event.data);
+        // };
+
+        // this.ws.onclose = () => console.log("WebSocket закрыт");
+        // Запускаем ваше видео файлом
+        this.$refs.remoteVideo
+          .play()
+          .catch((e) => console.error("Ошибка воспроизведения:", e));
       } catch (error) {
         console.error("Ошибка доступа к медиаустройствам:", error);
         alert("Не удалось получить доступ к камере/микрофону");
@@ -130,6 +146,29 @@ export default {
     },
     removeNotification(id) {
       this.notifications = this.notifications.filter((n) => n.id !== id);
+    },
+    sendFrames() {
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      const video = this.$refs.localVideo;
+
+      const send = () => {
+        if (this.ws.readyState !== WebSocket.OPEN) return;
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob((blob) => {
+          blob.arrayBuffer().then((buffer) => {
+            this.ws.send(buffer);
+          });
+        }, "image/jpeg");
+
+        setTimeout(send, 100); // Отправляем кадры каждые 100 мс
+      };
+
+      send();
     },
     setupAudioAnalysis() {
       try {

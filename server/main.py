@@ -23,7 +23,9 @@ class User(BaseModel):
 
 @app.post("/login")
 async def login(user: User):
-    return {"status": True}
+    if user.login == "admin" and user.password == "admin":
+        return {"status": True}
+    return {"status": False}
 
 
 if __name__ == "__main__":
