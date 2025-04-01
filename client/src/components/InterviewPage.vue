@@ -2,7 +2,7 @@
   <div class="interview-container">
     <!-- Основное видео собеседника -->
     <div class="main-video">
-      <video ref="remoteVideo" controls>
+      <video ref="remoteVideo">
         <source :src="videoSource" type="video/mp4" />
       </video>
       <div class="user-info">
@@ -13,7 +13,7 @@
 
     <!-- Ваше видео с индикацией звука -->
     <div class="local-video">
-      <video ref="localVideo" autoplay playsinline muted></video>
+      <video ref="localVideo" autoplay muted></video>
       <div class="volume-indicator" :class="indicatorClass"></div>
       <div class="user-info">
         <span class="user-name">Вы</span>
@@ -24,21 +24,18 @@
     <!-- Панель управления -->
     <div class="control-panel">
       <button @click="toggleMic" :class="{ active: !micMuted }">
-        <i class="icon-mic"></i>
-        {{ micMuted ? "Вкл. микрофон" : "Выкл. микрофон" }}
+        <img src="./../assets/zvuk.png" alt="">
       </button>
       <button @click="toggleCamera" :class="{ active: !cameraOff }">
-        <i class="icon-camera"></i>
-        {{ cameraOff ? "Вкл. камеру" : "Выкл. камеру" }}
+        <img src="./../assets/video.png" alt="">
       </button>
       <button @click="endInterview" class="end-call">
-        <i class="icon-phone"></i>
-        Завершить
+        <img src="./../assets/stop.png" alt="">
       </button>
     </div>
 
     <!-- Боковая панель с чатом -->
-    <div class="sidebar">
+    <!-- <div class="sidebar">
       <div class="chat-container">
         <div class="chat-messages">
           <div
@@ -79,7 +76,7 @@
           <span v-if="participant.id === 1">(Вы)</span>
         </div>
       </div>
-    </div>
+    </div> -->
   </div>
 </template>
 
@@ -121,7 +118,7 @@ export default {
     },
     statusText() {
       if (this.micMuted) return "Микрофон выключен";
-      return !this.isSpeaking ? "Говорите..." : "Микрофон активен";
+      return !this.isSpeaking ? "Говорите!" : "Молчите!";
     },
   },
   methods: {
@@ -248,27 +245,31 @@ export default {
 
 <style scoped>
 .interview-container {
-  display: grid;
-  grid-template-columns: 3fr 1fr;
-  grid-template-rows: auto 80px;
+  /* display: grid; */
+  /* grid-template-columns: 3fr 1fr; */
+  /* grid-template-rows: auto 80px; */
   height: 100vh;
-  background: #1c1f2e;
+  /* background: #1c1f2e; */
+  background-color: #c0c0c0;
   color: white;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "SF Compact Display", sans-serif;
+  position: relative;
 }
 
 .main-video {
-  grid-column: 1;
-  grid-row: 1;
-  position: relative;
-  background: #0f121f;
-  height: calc(100vh - 80px);
+  width: 100%;
+  /* height: 100%; */
+  /* grid-column: 1; */
+  /* grid-row: 1; */
+  /* position: relative; */
+  /* background: #0f121f; */
+  /* height: calc(100vh - 80px); */
 }
 
 .main-video video {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: 100vh;
+  /* object-fit: cover; */
 }
 
 .local-video {
@@ -277,9 +278,12 @@ export default {
   right: 20px;
   width: 200px;
   height: 120px;
-  border-radius: 8px;
+  /* border-radius: 8px; */
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid black;
+  border-right: 1px solid black;
+  border-top: 1px solid #ffffff;
+  border-left: 1px solid #ffffff;
 }
 
 .local-video video {
@@ -318,7 +322,7 @@ export default {
   left: 10px;
   background: rgba(0, 0, 0, 0.7);
   padding: 5px 10px;
-  border-radius: 4px;
+  /* border-radius: 4px; */
   font-size: 12px;
   line-height: 1.4;
   max-width: calc(100% - 20px);
@@ -351,28 +355,15 @@ export default {
 }
 
 .control-panel {
-  grid-column: 1;
-  grid-row: 2;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 15px;
-  background: #292d3e;
-  padding: 10px;
+  position: absolute;
+  bottom: 100px;
+  left: 45%;
+  /* height: 120px; */
+  /* border-radius: 8px; */
+  /* overflow: hidden; */
 }
 
 .control-panel button {
-  padding: 10px 20px;
-  border-radius: 24px;
-  border: none;
-  background: #3a3f55;
-  color: white;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s ease;
-  font-size: 14px;
 }
 
 .control-panel button:hover {
@@ -392,14 +383,14 @@ export default {
   background: #c0392b;
 }
 
-.sidebar {
+/* .sidebar {
   grid-column: 2;
   grid-row: 1 / span 2;
   background: #252837;
   display: flex;
   flex-direction: column;
   border-left: 1px solid #3a3f55;
-}
+} */
 
 .chat-container {
   flex: 1;
@@ -560,20 +551,4 @@ export default {
   }
 }
 
-/* Иконки (можно заменить на реальные) */
-.icon-mic::before {
-  content: "🎤";
-}
-.icon-camera::before {
-  content: "📷";
-}
-.icon-phone::before {
-  content: "📞";
-}
-.icon-send::before {
-  content: "➤";
-}
-.icon-user::before {
-  content: "👤";
-}
 </style>
