@@ -1,23 +1,23 @@
 <template>
   <div class="interview-container">
-    <!-- Основное видео (собеседник) -->
+    <!-- Основное видео собеседника -->
     <div class="main-video">
-      <video ref="remoteVideo" autoplay playsinline></video>
+      <video ref="remoteVideo" controls>
+        <source :src="videoSource" type="video/mp4" />
+      </video>
       <div class="user-info">
         <span class="user-name">Собеседник</span>
         <span class="user-status">В сети</span>
       </div>
     </div>
 
-    <!-- Ваше видео (превью) с индикацией звука -->
-    <div class="local-video" :class="{ speaking: isSpeaking }">
+    <!-- Ваше видео с индикацией звука -->
+    <div class="local-video">
       <video ref="localVideo" autoplay playsinline muted></video>
-      <div class="volume-indicator"></div>
+      <div class="volume-indicator" :class="indicatorClass"></div>
       <div class="user-info">
         <span class="user-name">Вы</span>
-        <span class="user-status">{{
-          micMuted ? "Микрофон выключен" : "Говорите..."
-        }}</span>
+        <span class="user-status">{{ statusText }}</span>
       </div>
     </div>
 
@@ -72,8 +72,9 @@
           v-for="participant in participants"
           :key="participant.id"
           class="participant"
+          :class="{ speaking: participant.speaking }"
         >
-          <i class="icon-user" :class="{ speaking: participant.speaking }"></i>
+          <i class="icon-user"></i>
           {{ participant.name }}
           <span v-if="participant.id === 1">(Вы)</span>
         </div>
@@ -93,6 +94,10 @@ export default {
       audioContext: null,
       analyser: null,
       animationId: null,
+      volumeLevel: 0,
+      lastSoundTime: 0,
+      speakingTimeout: null,
+      videoSource: require("../../data/481107642927.mp4"),
       messages: [
         {
           sender: "Собеседник",
@@ -101,12 +106,23 @@ export default {
       ],
       newMessage: "",
       participants: [
-        { id: 1, name: "Иван Петров", speaking: false },
-        { id: 2, name: "Анна Сидорова", speaking: true },
+        { id: 1, name: "Иван Ежов", speaking: false },
+        { id: 2, name: "Арсений Ильин", speaking: false },
+        { id: 2, name: "Даниил Крупнов", speaking: false },
       ],
       localStream: null,
       remoteStream: null,
     };
+  },
+  computed: {
+    indicatorClass() {
+      if (this.micMuted) return "muted";
+      return !this.isSpeaking ? "speaking" : "silent";
+    },
+    statusText() {
+      if (this.micMuted) return "Микрофон выключен";
+      return !this.isSpeaking ? "Говорите..." : "Микрофон активен";
+    },
   },
   methods: {
     async startVideo() {
@@ -118,13 +134,13 @@ export default {
         this.$refs.localVideo.srcObject = this.localStream;
         this.setupAudioAnalysis();
 
-        // Симуляция удаленного потока (в реальном приложении нужно WebRTC подключение)
-        setTimeout(() => {
-          this.remoteStream = new MediaStream(this.localStream.getTracks());
-          this.$refs.remoteVideo.srcObject = this.remoteStream;
-        }, 1000);
+        // Запускаем ваше видео файлом
+        this.$refs.remoteVideo
+          .play()
+          .catch((e) => console.error("Ошибка воспроизведения:", e));
       } catch (error) {
         console.error("Ошибка доступа к медиаустройствам:", error);
+        alert("Не удалось получить доступ к камере/микрофону");
       }
     },
     setupAudioAnalysis() {
@@ -152,10 +168,19 @@ export default {
       for (let i = 0; i < dataArray.length; i++) {
         sum += dataArray[i];
       }
-      const average = sum / dataArray.length;
+      this.volumeLevel = sum / dataArray.length;
 
-      this.isSpeaking = average > 10 && !this.micMuted;
-      this.participants[0].speaking = this.isSpeaking;
+      const SPEAKING_THRESHOLD = 50;
+      const SILENCE_DELAY = 1000;
+      if (this.volumeLevel > SPEAKING_THRESHOLD && !this.micMuted) {
+        this.isSpeaking = true;
+        this.lastSoundTime = Date.now();
+        this.participants[0].speaking = true;
+        clearTimeout(this.speakingTimeout);
+      } else if (Date.now() - this.lastSoundTime > SILENCE_DELAY) {
+        this.isSpeaking = false;
+        this.participants[0].speaking = false;
+      }
 
       this.animationId = requestAnimationFrame(this.detectSound);
     },
@@ -165,6 +190,10 @@ export default {
         this.localStream.getAudioTracks().forEach((track) => {
           track.enabled = !this.micMuted;
         });
+      }
+      if (this.micMuted) {
+        this.isSpeaking = false;
+        this.participants[0].speaking = false;
       }
     },
     toggleCamera() {
@@ -186,15 +215,13 @@ export default {
       }
     },
     scrollChatToBottom() {
-      const chat = this.$el.querySelector(".chat-messages");
-      if (chat) {
-        setTimeout(() => {
-          chat.scrollTop = chat.scrollHeight;
-        }, 50);
-      }
+      this.$nextTick(() => {
+        const chat = this.$el.querySelector(".chat-messages");
+        if (chat) chat.scrollTop = chat.scrollHeight;
+      });
     },
     endInterview() {
-      if (confirm("Завершить собеседование?")) {
+      if (confirm("Вы уверены, что хотите завершить собеседование?")) {
         if (this.localStream) {
           this.localStream.getTracks().forEach((track) => track.stop());
         }
@@ -250,16 +277,9 @@ export default {
   right: 20px;
   width: 200px;
   height: 120px;
-  border: 2px solid #42b983;
   border-radius: 8px;
   overflow: hidden;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-.local-video.speaking {
-  border-color: #ff5722;
-  box-shadow: 0 0 15px #ff5722;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .local-video video {
@@ -270,25 +290,26 @@ export default {
 
 .volume-indicator {
   position: absolute;
-  bottom: 5px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 80%;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
-  overflow: hidden;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  transition: all 0.3s ease;
 }
 
-.local-video.speaking .volume-indicator::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 100%;
-  background: #ff5722;
-  animation: volumePulse 1.5s infinite;
+.volume-indicator.speaking {
+  background: linear-gradient(90deg, #ff5722, #f44336);
+  box-shadow: 0 0 10px rgba(244, 67, 54, 0.7);
+  animation: pulse 1.5s infinite;
+}
+
+.volume-indicator.silent {
+  background: linear-gradient(90deg, #4caf50, #8bc34a);
+  box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+}
+
+.volume-indicator.muted {
+  background: #607d8b;
 }
 
 .user-info {
@@ -300,21 +321,33 @@ export default {
   border-radius: 4px;
   font-size: 12px;
   line-height: 1.4;
+  max-width: calc(100% - 20px);
 }
 
 .user-name {
   display: block;
   font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .user-status {
   display: block;
   font-size: 0.8em;
-  color: #42b983;
 }
 
-.local-video.speaking .user-status {
-  color: #ff5722;
+.volume-indicator.silent ~ .user-info .user-status {
+  color: #8bc34a;
+}
+
+.volume-indicator.speaking ~ .user-info .user-status {
+  color: #ff9800;
+  font-weight: bold;
+}
+
+.volume-indicator.muted ~ .user-info .user-status {
+  color: #b0bec5;
 }
 
 .control-panel {
@@ -323,14 +356,14 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 20px;
+  gap: 15px;
   background: #292d3e;
   padding: 10px;
 }
 
 .control-panel button {
   padding: 10px 20px;
-  border-radius: 20px;
+  border-radius: 24px;
   border: none;
   background: #3a3f55;
   color: white;
@@ -339,10 +372,12 @@ export default {
   align-items: center;
   gap: 8px;
   transition: all 0.2s ease;
+  font-size: 14px;
 }
 
 .control-panel button:hover {
   transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .control-panel button.active {
@@ -371,6 +406,7 @@ export default {
   display: flex;
   flex-direction: column;
   padding: 15px;
+  border-bottom: 1px solid #3a3f55;
 }
 
 .chat-messages {
@@ -378,14 +414,32 @@ export default {
   overflow-y: auto;
   margin-bottom: 15px;
   padding-right: 5px;
+  scrollbar-width: thin;
+  scrollbar-color: #42b983 #3a3f55;
+}
+
+.chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background: #3a3f55;
+  border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background-color: #42b983;
+  border-radius: 3px;
 }
 
 .message {
-  margin-bottom: 10px;
-  padding: 8px 12px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
   background: #3a3f55;
   border-radius: 8px;
   word-break: break-word;
+  line-height: 1.4;
+  animation: fadeIn 0.3s ease;
 }
 
 .message.own-message {
@@ -400,88 +454,113 @@ export default {
 
 .chat-input input {
   flex: 1;
-  padding: 12px;
+  padding: 12px 14px;
   border-radius: 8px;
   border: none;
   background: #3a3f55;
   color: white;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.chat-input input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #42b983;
 }
 
 .chat-input input:disabled {
-  opacity: 0.6;
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .chat-input button {
-  padding: 0 15px;
+  padding: 0 16px;
   border-radius: 8px;
   border: none;
   background: #42b983;
   color: white;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chat-input button:hover {
+  background: #3aa876;
 }
 
 .chat-input button:disabled {
   background: #3a3f55;
   cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .participants {
   padding: 15px;
-  border-top: 1px solid #3a3f55;
+  overflow-y: auto;
 }
 
 .participants h3 {
   margin-bottom: 15px;
   font-size: 16px;
+  color: #b0bec5;
 }
 
 .participant {
-  padding: 8px 12px;
-  margin-top: 5px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
   background: #3a3f55;
   border-radius: 8px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+
+.participant.speaking {
+  background: rgba(255, 152, 0, 0.15);
+  border-left: 3px solid #ff9800;
+}
+
+.participant:hover {
+  background: #4a4f65;
 }
 
 .icon-user {
   color: #42b983;
+  font-style: normal;
 }
 
-.icon-user.speaking {
-  color: #ff5722;
+.participant.speaking .icon-user {
+  color: #ff9800;
   animation: pulse 1.5s infinite;
-}
-
-@keyframes volumePulse {
-  0% {
-    transform: scaleX(0.3);
-    opacity: 0.7;
-  }
-  50% {
-    transform: scaleX(1);
-    opacity: 1;
-  }
-  100% {
-    transform: scaleX(0.3);
-    opacity: 0.7;
-  }
 }
 
 @keyframes pulse {
   0% {
+    opacity: 0.7;
     transform: scale(1);
   }
   50% {
-    transform: scale(1.2);
+    opacity: 1;
+    transform: scale(1.1);
   }
   100% {
+    opacity: 0.7;
     transform: scale(1);
   }
 }
 
-/* Иконки (можно заменить на реальные иконки из шрифта или SVG) */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Иконки (можно заменить на реальные) */
 .icon-mic::before {
   content: "🎤";
 }
@@ -492,7 +571,7 @@ export default {
   content: "📞";
 }
 .icon-send::before {
-  content: "✉️";
+  content: "➤";
 }
 .icon-user::before {
   content: "👤";
