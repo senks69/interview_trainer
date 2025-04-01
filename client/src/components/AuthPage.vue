@@ -95,13 +95,17 @@ export default {
   align-items: center;
   font-family: 'SF Compact Display', sans-serif;
 }
-.title-text{
+.title-text {
   width: 100%;
-  background: rgb(0,0,128);
-  background: linear-gradient(90deg, rgba(0,0,128,1) 0%, rgba(16,132,208,1) 100%);
+  background: rgb(0, 0, 128);
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 128, 1) 0%,
+    rgba(16, 132, 208, 1) 100%
+  );
   margin: 0;
   color: #fff;
-  font-family: 'SF Compact Display', sans-serif;
+  font-family: "SF Compact Display", sans-serif;
   font-size: 32px;
   font-weight: 900;
   display: flex;
@@ -117,13 +121,13 @@ export default {
 
   width: 545px;
   height: 290px;
-  background-color: #C0C0C0;
+  background-color: #c0c0c0;
   border-bottom: 1px solid black;
   border-right: 1px solid black;
   border-top: 1px solid #ffffff;
   border-left: 1px solid #ffffff;
 }
-form{
+form {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -132,15 +136,15 @@ form{
 .form-group {
   display: flex;
   flex-direction: column;
-  color: #0026FF;
+  color: #0026ff;
   font-weight: 900;
   align-items: flex-start;
   width: 425px;
 }
-.form-group input{
+.form-group input {
   width: 100%;
 }
-.enter-btn{
+.enter-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -153,10 +157,9 @@ form{
   border-top: 1px solid #ffffff;
   border-left: 1px solid #ffffff;
 
-  color: #0026FF;
-  font-family: 'SF Compact Display', sans-serif;
+  color: #0026ff;
+  font-family: "SF Compact Display", sans-serif;
   font-weight: 900;
   font-size: 16px;
-
 }
 </style>
