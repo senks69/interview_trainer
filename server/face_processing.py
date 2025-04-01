@@ -1,37 +1,55 @@
 from fastapi import APIRouter, WebSocket
 import numpy as np
 import cv2
-from fer import FER
 
 router = APIRouter()
 
-detector = FER()
+# Загрузка модели (выполняется один раз при старте)
+emotion_labels = [
+    "Нейтрально",
+    "Счастье",
+    "Грусть",
+    "Удивление",
+    "Страх",
+    "Отвращение",
+    "Гнев",
+    "Презрение",
+]
+emotion_net = cv2.dnn.readNetFromONNX(
+    "emotion-ferplus-8.onnx"
+)  # Путь к файлу модели
 
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
+    print("Qweqweqweqw")
 
     while True:
-        data = await websocket.receive_bytes()
-        np_arr = np.frombuffer(data, np.uint8)
-        frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-
         try:
-            # Распознавание эмоций
-            emotions = detector.detect_emotions(frame)
-            if emotions:
-                dominant_emotion = max(
-                    emotions[0]["emotions"], key=emotions[0]["emotions"].get
-                )
-                print(
-                    f"Эмоция: {dominant_emotion}"
-                )  # Можно отправлять клиенту
+            # Получаем кадр от клиента
+            data = await websocket.receive_bytes()
+            frame = cv2.imdecode(
+                np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR
+            )
+
+            # Подготовка кадра для модели
+            blob = cv2.dnn.blobFromImage(
+                frame,
+                scalefactor=1.0,
+                size=(64, 64),  # FER+ ожидает 64x64
+                mean=(0.5, 0.5, 0.5),
+                swapRB=True,
+            )
+
+            # Предсказание эмоции
+            emotion_net.setInput(blob)
+            outputs = emotion_net.forward()
+            emotion_idx = np.argmax(outputs)
+            emotion = emotion_labels[emotion_idx]
+            print("--->", emotion)
+            await websocket.send_text(f"Emotion: {emotion}")
+
         except Exception as e:
-            print(f"Ошибка: {e}")
-
-        cv2.imshow("Server", frame)
-        if cv2.waitKey(1) & 0xFF == ord("q"):
+            print(f"Error: {e}")
             break
-
-    cv2.destroyAllWindows()
