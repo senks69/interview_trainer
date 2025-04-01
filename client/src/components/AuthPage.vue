@@ -5,7 +5,7 @@
       :key="index" 
       class="auth-container"
       ref="authContainer"
-      :style="{ left: window.x + 'px', top: window.y + 'px', opacity: 1 - index * 0.05 }"
+      :style="{ left: window.x + 'px', top: window.y + 'px',}"
       @mousedown="startDrag(index, $event)"
     >
       <div class="title-text">
@@ -69,12 +69,12 @@ export default {
     createGhostWindows(x, y) {
       this.windows.push({ x: x + 10, y: y + 10, email: "", password: "" });
       if (this.windows.length > 10) {
-        this.windows.shift(); // Удаляет самое старое окно
+        this.windows.shift();
       }
     },
     cleanupOldWindows() {
       if (this.windows.length > 10) {
-        this.windows.splice(0, this.windows.length - 10); // Оставляет только 10 последних окон
+        this.windows.splice(0, this.windows.length - 10);
       }
     }
   },
