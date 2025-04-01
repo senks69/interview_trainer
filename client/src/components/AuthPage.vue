@@ -1,6 +1,7 @@
 <template>
   <div class="auth-container">
     <h1>Вход</h1>
+    <div v-if="error_msg" class="error">{{ error_msg }}</div>
     <form @submit.prevent="handleSubmit">
       <div class="form-group">
         <label>Email</label>
@@ -16,18 +17,34 @@
 </template>
 
 <script>
+import axios from "axios";
+
 export default {
   name: "AuthPage",
   data() {
     return {
       email: "",
       password: "",
+      error_msg: "",
     };
   },
   methods: {
     handleSubmit() {
       console.log(this.email, this.password);
-      this.$router.push("/home");
+      axios
+        .post("http://localhost:8000/login", {
+          login: this.email,
+          password: this.password,
+        })
+        .then((response) => {
+          console.log(response);
+          if (response.status == 200) {
+            this.$router.push("/home");
+          }
+        })
+        .catch((error) => {
+          this.error_msg = "Не верный логин или пароль";
+        });
     },
   },
 };
