@@ -1,5 +1,6 @@
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -26,6 +27,14 @@ async def login(user: User):
     if user.login == "admin" and user.password == "admin":
         return {"status": True}
     return {"status": False}
+
+
+@app.post("/upload-image/")
+async def upload_image(file: UploadFile = File(...)):
+    file_location = f"uploads/{file.filename}"
+    with open(file_location, "wb") as buffer:
+        buffer.write(await file.read())
+    return {"status": True}
 
 
 if __name__ == "__main__":
