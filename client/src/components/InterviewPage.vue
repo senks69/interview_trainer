@@ -5,10 +5,6 @@
       <video ref="remoteVideo">
         <source :src="videoSource" type="video/mp4" />
       </video>
-      <div class="user-info">
-        <span class="user-name">Собеседник</span>
-        <span class="user-status">В сети</span>
-      </div>
     </div>
 
     <!-- Ваше видео с индикацией звука -->
