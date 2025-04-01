@@ -54,7 +54,7 @@ export default {
         })
         .then((response) => {
           console.log(response);
-          if (response.status == 200) {
+          if (response.data.status == true) {
             this.$router.push("/home");
           }
         })

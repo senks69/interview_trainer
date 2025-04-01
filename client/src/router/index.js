@@ -16,6 +16,11 @@ const routes = [
     name: "interview",
     component: () => import("../components/InterviewPage.vue"),
   },
+  {
+    path: "/feedback",
+    name: "feedback",
+    component: () => import("../components/FeedbackPage.vue"),
+  },
 ];
 
 const router = createRouter({
