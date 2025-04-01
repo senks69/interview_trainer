@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
-from face_processing import router
+# from face_processing import router
 
 app = FastAPI(title="Simple FastAPI Server")
 app.add_middleware(
@@ -14,7 +14,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.include_router(router)
+# app.include_router(router)
 
 
 class User(BaseModel):
