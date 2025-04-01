@@ -1,10 +1,24 @@
 <template>
-  <nav>
-    <router-link to="/">Home</router-link> |
-    <router-link to="/about">About</router-link>
-  </nav>
-  <router-view/>
+  <div id="app">
+    <nav v-if="isAuthenticated">
+      <router-link to="/home">Главная</router-link> |
+      <router-link to="/about">О проекте</router-link>
+    </nav>
+    <router-view />
+  </div>
 </template>
+
+<script>
+export default {
+  name: "App",
+  data() {
+    return {
+      isAuthenticated: false,
+    };
+  },
+  created() {},
+};
+</script>
 
 <style>
 #app {
@@ -22,9 +36,11 @@ nav {
 nav a {
   font-weight: bold;
   color: #2c3e50;
+  margin: 0 10px;
 }
 
 nav a.router-link-exact-active {
   color: #42b983;
+  text-decoration: underline;
 }
 </style>
