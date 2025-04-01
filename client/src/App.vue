@@ -21,7 +21,16 @@ export default {
 </script>
 
 <style>
+@import url('https://fonts.cdnfonts.com/css/sf-compact-display');
+
+html,body{
+  padding: 0;
+  margin: 0;
+  height: 100%;
+  width: 100%;
+}
 #app {
+  height: 100%;
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
