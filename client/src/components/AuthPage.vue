@@ -27,6 +27,7 @@ export default {
   methods: {
     handleSubmit() {
       console.log(this.email, this.password);
+      this.$router.push("/home");
     },
   },
 };

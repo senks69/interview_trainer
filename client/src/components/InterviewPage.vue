@@ -9,9 +9,16 @@
       </div>
     </div>
 
-    <!-- Ваше видео (превью) -->
-    <div class="local-video">
+    <!-- Ваше видео (превью) с индикацией звука -->
+    <div class="local-video" :class="{ speaking: isSpeaking }">
       <video ref="localVideo" autoplay playsinline muted></video>
+      <div class="volume-indicator"></div>
+      <div class="user-info">
+        <span class="user-name">Вы</span>
+        <span class="user-status">{{
+          micMuted ? "Микрофон выключен" : "Говорите..."
+        }}</span>
+      </div>
     </div>
 
     <!-- Панель управления -->
@@ -38,6 +45,7 @@
             v-for="(message, index) in messages"
             :key="index"
             class="message"
+            :class="{ 'own-message': message.sender === 'Вы' }"
           >
             <strong>{{ message.sender }}:</strong> {{ message.text }}
           </div>
@@ -47,8 +55,14 @@
             v-model="newMessage"
             @keyup.enter="sendMessage"
             placeholder="Введите сообщение..."
+            :disabled="micMuted"
           />
-          <button @click="sendMessage">Отправить</button>
+          <button
+            @click="sendMessage"
+            :disabled="micMuted || !newMessage.trim()"
+          >
+            <i class="icon-send"></i>
+          </button>
         </div>
       </div>
 
@@ -59,7 +73,9 @@
           :key="participant.id"
           class="participant"
         >
+          <i class="icon-user" :class="{ speaking: participant.speaking }"></i>
           {{ participant.name }}
+          <span v-if="participant.id === 1">(Вы)</span>
         </div>
       </div>
     </div>
@@ -73,6 +89,10 @@ export default {
     return {
       micMuted: false,
       cameraOff: false,
+      isSpeaking: false,
+      audioContext: null,
+      analyser: null,
+      animationId: null,
       messages: [
         {
           sender: "Собеседник",
@@ -81,8 +101,8 @@ export default {
       ],
       newMessage: "",
       participants: [
-        { id: 1, name: "Вы" },
-        { id: 2, name: "Интервьюер" },
+        { id: 1, name: "Иван Петров", speaking: false },
+        { id: 2, name: "Анна Сидорова", speaking: true },
       ],
       localStream: null,
       remoteStream: null,
@@ -96,13 +116,48 @@ export default {
           audio: true,
         });
         this.$refs.localVideo.srcObject = this.localStream;
+        this.setupAudioAnalysis();
 
-        // Здесь должна быть логика подключения к удаленному потоку
-        // this.remoteStream = ...
-        // this.$refs.remoteVideo.srcObject = this.remoteStream
+        // Симуляция удаленного потока (в реальном приложении нужно WebRTC подключение)
+        setTimeout(() => {
+          this.remoteStream = new MediaStream(this.localStream.getTracks());
+          this.$refs.remoteVideo.srcObject = this.remoteStream;
+        }, 1000);
       } catch (error) {
         console.error("Ошибка доступа к медиаустройствам:", error);
       }
+    },
+    setupAudioAnalysis() {
+      try {
+        this.audioContext = new (window.AudioContext ||
+          window.webkitAudioContext)();
+        this.analyser = this.audioContext.createAnalyser();
+        this.analyser.fftSize = 256;
+
+        const audioSource = this.audioContext.createMediaStreamSource(
+          this.localStream
+        );
+        audioSource.connect(this.analyser);
+
+        this.detectSound();
+      } catch (error) {
+        console.error("Ошибка анализа аудио:", error);
+      }
+    },
+    detectSound() {
+      const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+      this.analyser.getByteFrequencyData(dataArray);
+
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        sum += dataArray[i];
+      }
+      const average = sum / dataArray.length;
+
+      this.isSpeaking = average > 10 && !this.micMuted;
+      this.participants[0].speaking = this.isSpeaking;
+
+      this.animationId = requestAnimationFrame(this.detectSound);
     },
     toggleMic() {
       this.micMuted = !this.micMuted;
@@ -121,26 +176,42 @@ export default {
       }
     },
     sendMessage() {
-      if (this.newMessage.trim()) {
+      if (this.newMessage.trim() && !this.micMuted) {
         this.messages.push({
           sender: "Вы",
           text: this.newMessage,
         });
         this.newMessage = "";
-        // Здесь можно добавить прокрутку чата вниз
+        this.scrollChatToBottom();
+      }
+    },
+    scrollChatToBottom() {
+      const chat = this.$el.querySelector(".chat-messages");
+      if (chat) {
+        setTimeout(() => {
+          chat.scrollTop = chat.scrollHeight;
+        }, 50);
       }
     },
     endInterview() {
-      if (this.localStream) {
-        this.localStream.getTracks().forEach((track) => track.stop());
+      if (confirm("Завершить собеседование?")) {
+        if (this.localStream) {
+          this.localStream.getTracks().forEach((track) => track.stop());
+        }
+        this.$router.push("/feedback");
       }
-      this.$router.push("/feedback");
     },
   },
   mounted() {
     this.startVideo();
   },
   beforeUnmount() {
+    if (this.animationId) {
+      cancelAnimationFrame(this.animationId);
+    }
+    if (this.audioContext) {
+      this.audioContext.close();
+    }
     if (this.localStream) {
       this.localStream.getTracks().forEach((track) => track.stop());
     }
@@ -156,6 +227,7 @@ export default {
   height: 100vh;
   background: #1c1f2e;
   color: white;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .main-video {
@@ -179,14 +251,70 @@ export default {
   width: 200px;
   height: 120px;
   border: 2px solid #42b983;
-  border-radius: 4px;
+  border-radius: 8px;
   overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.local-video.speaking {
+  border-color: #ff5722;
+  box-shadow: 0 0 15px #ff5722;
 }
 
 .local-video video {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.volume-indicator {
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.local-video.speaking .volume-indicator::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background: #ff5722;
+  animation: volumePulse 1.5s infinite;
+}
+
+.user-info {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.user-name {
+  display: block;
+  font-weight: bold;
+}
+
+.user-status {
+  display: block;
+  font-size: 0.8em;
+  color: #42b983;
+}
+
+.local-video.speaking .user-status {
+  color: #ff5722;
 }
 
 .control-panel {
@@ -197,6 +325,7 @@ export default {
   align-items: center;
   gap: 20px;
   background: #292d3e;
+  padding: 10px;
 }
 
 .control-panel button {
@@ -209,6 +338,11 @@ export default {
   display: flex;
   align-items: center;
   gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.control-panel button:hover {
+  transform: translateY(-2px);
 }
 
 .control-panel button.active {
@@ -219,12 +353,17 @@ export default {
   background: #e74c3c;
 }
 
+.control-panel button.end-call:hover {
+  background: #c0392b;
+}
+
 .sidebar {
   grid-column: 2;
   grid-row: 1 / span 2;
   background: #252837;
   display: flex;
   flex-direction: column;
+  border-left: 1px solid #3a3f55;
 }
 
 .chat-container {
@@ -238,13 +377,20 @@ export default {
   flex: 1;
   overflow-y: auto;
   margin-bottom: 15px;
+  padding-right: 5px;
 }
 
 .message {
   margin-bottom: 10px;
-  padding: 8px;
+  padding: 8px 12px;
   background: #3a3f55;
-  border-radius: 4px;
+  border-radius: 8px;
+  word-break: break-word;
+}
+
+.message.own-message {
+  background: #42b983;
+  color: white;
 }
 
 .chat-input {
@@ -254,11 +400,29 @@ export default {
 
 .chat-input input {
   flex: 1;
-  padding: 10px;
-  border-radius: 4px;
+  padding: 12px;
+  border-radius: 8px;
   border: none;
   background: #3a3f55;
   color: white;
+}
+
+.chat-input input:disabled {
+  opacity: 0.6;
+}
+
+.chat-input button {
+  padding: 0 15px;
+  border-radius: 8px;
+  border: none;
+  background: #42b983;
+  color: white;
+  cursor: pointer;
+}
+
+.chat-input button:disabled {
+  background: #3a3f55;
+  cursor: not-allowed;
 }
 
 .participants {
@@ -266,25 +430,71 @@ export default {
   border-top: 1px solid #3a3f55;
 }
 
+.participants h3 {
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
 .participant {
-  padding: 8px;
+  padding: 8px 12px;
   margin-top: 5px;
   background: #3a3f55;
-  border-radius: 4px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.user-info {
-  position: absolute;
-  bottom: 20px;
-  left: 20px;
-  background: rgba(0, 0, 0, 0.5);
-  padding: 5px 10px;
-  border-radius: 4px;
-}
-
-.user-status {
-  display: block;
-  font-size: 0.8em;
+.icon-user {
   color: #42b983;
+}
+
+.icon-user.speaking {
+  color: #ff5722;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes volumePulse {
+  0% {
+    transform: scaleX(0.3);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(0.3);
+    opacity: 0.7;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Иконки (можно заменить на реальные иконки из шрифта или SVG) */
+.icon-mic::before {
+  content: "🎤";
+}
+.icon-camera::before {
+  content: "📷";
+}
+.icon-phone::before {
+  content: "📞";
+}
+.icon-send::before {
+  content: "✉️";
+}
+.icon-user::before {
+  content: "👤";
 }
 </style>
