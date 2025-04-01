@@ -21,16 +21,26 @@
       </div>
     </div>
 
+    <div class="participants-container">
+      <div
+        v-for="participant in participants"
+        :key="participant.id"
+        class="avatar-wrapper"
+      >
+        <img :src="participant.avatar" :alt="participant.name" class="avatar" />
+      </div>
+    </div>
+
     <!-- Панель управления -->
     <div class="control-panel">
       <button @click="toggleMic" :class="{ active: !micMuted }">
-        <img src="./../assets/zvuk.png" alt="">
+        <img src="./../assets/zvuk.png" alt="" />
       </button>
       <button @click="toggleCamera" :class="{ active: !cameraOff }">
-        <img src="./../assets/video.png" alt="">
+        <img src="./../assets/video.png" alt="" />
       </button>
       <button @click="endInterview" class="end-call">
-        <img src="./../assets/stop.png" alt="">
+        <img src="./../assets/stop.png" alt="" />
       </button>
     </div>
 
@@ -103,9 +113,24 @@ export default {
       ],
       newMessage: "",
       participants: [
-        { id: 1, name: "Иван Ежов", speaking: false },
-        { id: 2, name: "Арсений Ильин", speaking: false },
-        { id: 2, name: "Даниил Крупнов", speaking: false },
+        {
+          id: 1,
+          name: "Иван Ежов",
+          speaking: false,
+          avatar: require("../../data/1.jpg"),
+        },
+        {
+          id: 2,
+          name: "Арсений Ильин",
+          speaking: false,
+          avatar: require("../../data/2.jpg"),
+        },
+        {
+          id: 2,
+          name: "Даниил Крупнов",
+          speaking: false,
+          avatar: require("../../data/3.jpg"),
+        },
       ],
       localStream: null,
       remoteStream: null,
@@ -525,6 +550,29 @@ export default {
   animation: pulse 1.5s infinite;
 }
 
+.participants-container {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  background-color: #ccc;
+  padding: 10px;
+  border-radius: 8px;
+  display: flex;
+  gap: 10px;
+}
+
+.avatar-wrapper {
+  width: 50px;
+  height: 50px;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 @keyframes pulse {
   0% {
     opacity: 0.7;
@@ -550,5 +598,4 @@ export default {
     transform: translateY(0);
   }
 }
-
 </style>
