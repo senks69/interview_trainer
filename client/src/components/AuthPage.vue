@@ -1,25 +1,25 @@
 <template>
   <div class="auth-wrapper">
-    <div 
-      v-for="(window, index) in windows" 
-      :key="index" 
+    <div
+      v-for="(window, index) in windows"
+      :key="index"
       class="auth-container"
       ref="authContainer"
-      :style="{ left: window.x + 'px', top: window.y + 'px',}"
+      :style="{ left: window.x + 'px', top: window.y + 'px' }"
       @mousedown="startDrag(index, $event)"
     >
       <div class="title-text">
-        <img src="./../assets/key_gray.png" alt="">Вход
+        <img src="./../assets/key_gray.png" alt="" />Вход
       </div>
       <div v-if="error_msg" class="error">{{ error_msg }}</div>
       <form @submit.prevent="handleSubmit">
         <div class="form-group">
           <label>Логин:</label>
-          <input v-model="window.email" type="email" required />
+          <input v-model="email" required />
         </div>
         <div class="form-group">
           <label>Пароль:</label>
-          <input v-model="window.password" type="password" required />
+          <input v-model="password" type="password" required />
         </div>
         <button class="enter-btn" type="submit">Войти</button>
       </form>
@@ -28,22 +28,39 @@
 </template>
 
 <script>
+import axios from "axios";
+
 export default {
   name: "AuthPage",
   data() {
     return {
-      windows: [
-        { x: 100, y: 100, email: "", password: "" }
-      ],
+      windows: [{ x: 100, y: 100 }],
       dragging: false,
+      email: "",
+      password: "",
       draggedWindow: null,
       offsetX: 0,
+      error_msg: "",
       offsetY: 0,
     };
   },
   methods: {
     handleSubmit() {
-      console.log("Login attempt");
+      console.log(this.windows.email, this.windows.password);
+      axios
+        .post("http://localhost:8000/login", {
+          login: this.email,
+          password: this.password,
+        })
+        .then((response) => {
+          console.log(response);
+          if (response.status == 200) {
+            this.$router.push("/home");
+          }
+        })
+        .catch((error) => {
+          this.error_msg = "Не верный логин или пароль";
+        });
     },
     startDrag(index, event) {
       this.dragging = true;
@@ -57,7 +74,10 @@ export default {
       if (!this.dragging || this.draggedWindow === null) return;
       this.windows[this.draggedWindow].x = event.clientX - this.offsetX;
       this.windows[this.draggedWindow].y = event.clientY - this.offsetY;
-      this.createGhostWindows(this.windows[this.draggedWindow].x, this.windows[this.draggedWindow].y);
+      this.createGhostWindows(
+        this.windows[this.draggedWindow].x,
+        this.windows[this.draggedWindow].y
+      );
     },
     stopDrag() {
       this.dragging = false;
@@ -76,15 +96,15 @@ export default {
       if (this.windows.length > 10) {
         this.windows.splice(0, this.windows.length - 10);
       }
-    }
+    },
   },
 };
 </script>
 
 <style scoped>
-.auth-wrapper{
+.auth-wrapper {
   position: relative;
-  background-color: #0077FF54;
+  background-color: #0077ff54;
   margin: 0;
   padding: 0;
   width: 100%;
@@ -93,7 +113,7 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  font-family: 'SF Compact Display', sans-serif;
+  font-family: "SF Compact Display", sans-serif;
 }
 .title-text {
   width: 100%;
